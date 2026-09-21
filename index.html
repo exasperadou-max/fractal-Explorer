@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Fractal Explorer</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+
+        background: #171717;
+        color: #dedbd1;
+        font-family: Tahoma, "Segoe UI", sans-serif;
+      }
+
+      /* toolbar */
+
+      #topbar {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 16px;
+
+        background: #27241e;
+        border-bottom: 3px solid #8d6a43;
+        box-shadow: inset 0 -1px #15130f;
+      }
+
+      #topbar h1 {
+        margin: 0 8px 0 0;
+
+        font: 21px/1 "Palatino Linotype", Palatino, Georgia, serif;
+        color: #ebe6d8;
+        white-space: nowrap;
+      }
+
+      /* controls */ 
+
+      select,
+      button,
+      input[type="number"] {
+        padding: 6px 10px;
+        border: 1px solid #4a4940;
+        border-radius: 3px;
+
+        background: #332f28;
+        color: #dad5c8;
+        font: 12px Tahoma, "Segoe UI", sans-serif;
+        cursor: pointer;
+      }
+
+      input[type="number"] {
+        cursor: text;
+      }
+
+      select:hover,
+      button:hover {
+        border-color: #a97743;
+      }
+
+      select:focus,
+      button:focus,
+      input:focus {
+        outline: none;
+        border-color: #c9873f;
+      }
+
+      button:active {
+        background: #23211a;
+      }
+
+      #helpBtn {
+        width: 28px;
+        height: 28px;
+        padding: 6px 0;
+        text-align: center;
+      }
+
+      #info {
+        display: flex;
+        gap: 12px;
+        margin-left: auto;
+
+        font-size: 11px;
+        color: #898476;
+        white-space: nowrap;
+      }
+
+      .divider {
+        display: none;
+      }
+
+      #stage {
+        position: relative;
+        flex: 1;
+        overflow: hidden;
+        cursor: grab;
+      }
+
+      #stage.dragging {
+        cursor: grabbing;
+      }
+
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: block;
+      }
+
+      #hint {
+        position: absolute;
+        bottom: 13px;
+        left: 14px;
+        padding: 5px 9px;
+
+        font-size: 11px;
+        color: #979183;
+        pointer-events: none;
+        transition: opacity 0.8s;
+      }
+
+      /* panels, customization and colorization */
+
+      #colorPanel,
+      #customPanel {
+        position: absolute;
+        top: 49px;
+        z-index: 20;
+        width: 240px;
+        max-height: calc(100% - 90px);
+        padding: 13px;
+        overflow-y: auto;
+
+        background: #232320;
+      }
+
+      #colorPanel {
+        right: 16px;
+      }
+
+      #customPanel {
+        left: 16px;
+      }
+
+      #colorPanel.show,
+      #customPanel.show {
+        display: block;
+      }
+
+      #colorPanel h3,
+      #customPanel h3,
+      #helpPanel h3 {
+        margin: 0 0 12px;
+
+        font: 600 13px Georgia, serif;
+        color: #d19959;
+      }
+
+      .stop-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 7px;
+      }
+
+      .stop-row input[type="color"] {
+        width: 30px;
+        height: 24px;
+        padding: 0;
+        border: 1px solid #34321f;
+        border-radius: 2px;
+        background: none;
+        cursor: pointer;
+      }
+
+      .stop-row label {
+        flex: 1;
+        font-size: 11px;
+        color: #9c9788;
+      }
+
+      .row2 {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .row2 button {
+        flex: 1;
+        padding: 7px;
+        font-size: 11px;
+      }
+
+      #cycleWrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 11px;
+        padding-top: 11px;
+        border-top: 1px solid #2a2820;
+      }
+
+      #cycleWrap label {
+        flex: 1;
+        font-size: 11px;
+        color: #9c9788;
+      }
+
+      /* fields 4 p.c */
+
+      .field {
+        margin-bottom: 11px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 11px;
+        color: #9c9788;
+      }
+
+      .field input[type="range"],
+      #cycleWrap input[type="range"] {
+        accent-color: #c9873f;
+      }
+
+      .field input[type="range"] {
+        width: 100%;
+      }
+
+      #cycleWrap input[type="range"] {
+        width: 85px;
+      }
+
+      .field.check label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        font-size: 12px;
+        color: #d8d3c4;
+        cursor: pointer;
+      }
+
+      .field.check input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+        accent-color: #c9873f;
+      }
+
+      .field .pair {
+        display: flex;
+        gap: 8px;
+      }
+
+      .field .pair input {
+        width: 50%;
+      }
+
+      #customPanel select {
+        width: 100%;
+      }
+
+      #helpOverlay {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: none;
+        align-items: center;
+        justify-content: center;
+
+        background: rgba(10, 9, 6, 0.65);
+      }
+
+      #helpOverlay.show {
+        display: flex;
+      }
+
+      #helpPanel {
+        width: min(440px, 86vw);
+        padding: 24px 26px;
+
+        background: #232320;
+        border-radius: 3px;
+      }
+
+      #helpPanel ul {
+        margin: 0 0 16px;
+        padding-left: 18px;
+
+        font-size: 12.5px;
+        line-height: 1.75;
+        color: #c7c2b3;
+      }
+
+      #helpPanel .k {
+        color: #e4e0d8;
+      }
+
+      #helpPanel button {
+        width: 100%;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <h1>Fractal Explorer</h1>
+      <select id="fractalType">
+        <option value="mandelbrot">Mandelbrot set</option>
+        <option value="julia1">Julia (dendrite)</option>
+        <option value="julia2">Julia (spiral)</option>
+        <option value="julia3">Julia (rabbit)</option>
+        <option value="burningship">Burning ship</option>
+        <option value="tricorn">Tricorn</option>
+        <option value="multibrot3">Multibrot (z³)</option>
+        <option value="celtic">Celtic mandelbrot</option>
+        <option value="phoenix">Phoenix</option>
+        <option value="custom">Custom</option>
+      </select>
+      <select id="paletteSelect">
+        <option value="fire">Fire</option>
+        <option value="ocean" selected>Ocean</option>
+        <option value="psychedelic">Psychedelic</option>
+        <option value="mono">Monochrome</option>
+        <option value="forest">Forest</option>
+        <option value="grape">Grape</option>
+        <option value="custom">Custom</option>
+      </select>
+      <div class="divider"></div>
+      <button id="resetBtn">Reset view</button>
+      <button id="helpBtn" title="How to use this">?</button>
+      <div id="info">
+        <span id="zoomInfo">zoom: 1.0x</span>
+        <span id="iterInfo">iterations: 300</span>
+      </div>
+    </div>
+
+    <div id="stage">
+      <canvas id="glcanvas"></canvas>
+      <div id="hint">
+        drag to pan · scroll or click to zoom · right-click to zoom out
+      </div>
+
+      <div id="colorPanel">
+        <h3>Custom palette</h3>
+        <div class="stop-row">
+          <input type="color" id="c0" value="#000814" /><label
+            >Deepest (in set)</label
+          >
+        </div>
+        <div class="stop-row">
+          <input type="color" id="c1" value="#001d3d" /><label>Stop 1</label>
+        </div>
+        <div class="stop-row">
+          <input type="color" id="c2" value="#003566" /><label>Stop 2</label>
+        </div>
+        <div class="stop-row">
+          <input type="color" id="c3" value="#ffc300" /><label>Stop 3</label>
+        </div>
+        <div class="stop-row">
+          <input type="color" id="c4" value="#ffffff" /><label>Brightest</label>
+        </div>
+        <div id="cycleWrap">
+          <label>Color cycles</label>
+          <input
+            type="range"
+            id="cycleCount"
+            min="1"
+            max="12"
+            value="1"
+            step="1"
+          />
+          <span id="cycleVal" style="font-size: 11px; color: #9c9788">1</span>
+        </div>
+      </div>
+
+      <div id="customPanel">
+        <h3>Build your own fractal</h3>
+        <div class="field">
+          <label>Style</label>
+          <select id="customMode">
+            <option value="0">Mandelbrot-style (pixel = c)</option>
+            <option value="1">Julia-style (pixel = start z)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Power — <span id="powerVal">2</span></label>
+          <input
+            type="range"
+            id="customPower"
+            min="2"
+            max="6"
+            step="1"
+            value="2"
+          />
+        </div>
+        <div class="field check">
+          <label
+            ><input type="checkbox" id="customConj" /> Conjugate z each step
+            (Tricorn-style)</label
+          >
+        </div>
+        <div class="field check">
+          <label
+            ><input type="checkbox" id="customAbsR" /> Fold real axis
+            (burning-ship-style)</label
+          >
+        </div>
+        <div class="field check">
+          <label
+            ><input type="checkbox" id="customAbsI" /> Fold imaginary
+            axis</label
+          >
+        </div>
+        <div class="field check">
+          <label><input type="checkbox" id="customFlip" /> Flip vertical</label>
+        </div>
+        <div class="field check">
+          <label
+            ><input type="checkbox" id="customPhoenix" /> Phoenix feedback (uses
+            last z too)</label
+          >
+        </div>
+        <div class="field" id="phoenixPField" style="display: none">
+          <label>Feedback strength — <span id="phoenixPVal">-0.50</span></label>
+          <input
+            type="range"
+            id="phoenixP"
+            min="-1"
+            max="1"
+            step="0.01"
+            value="-0.5"
+          />
+        </div>
+        <div class="field" id="juliaCField" style="display: none">
+          <label>Seed C (real, imaginary)</label>
+          <div class="pair">
+            <input type="number" id="juliaCRe" step="0.001" value="-0.4" />
+            <input type="number" id="juliaCIm" step="0.001" value="0.6" />
+          </div>
+        </div>
+        <div class="row2">
+          <button id="randomFractalBtn">Randomize</button>
+          <button id="closeCustomBtn">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="helpOverlay">
+      <div id="helpPanel">
+        <h3>How to explore</h3>
+        <ul>
+          <li>
+            <span class="k">Pan:</span> click and drag or one-finger drag on
+            touch.
+          </li>
+          <li>
+            <span class="k">Zoom in:</span> scroll up, pinch out, click or press
+            <span class="k">+</span>.
+          </li>
+          <li>
+            <span class="k">Zoom out:</span> scroll down, pinch in, right-click
+            or press <span class="k">-</span>.
+          </li>
+          <li>
+            <span class="k">Reset:</span> the "Reset view" button or press
+            <span class="k">0</span>.
+          </li>
+          <li>
+            <span class="k">Fractal menu:</span> pick a built-in type or choose
+            "Custom" to design your own from a power, folding, conjugate and
+            feedback toggles.
+          </li>
+          <li>
+            <span class="k">Palette menu:</span> pick a preset gradient, or
+            "Custom" for your own.
+          </li>
+          <li>Iteration count rises automatically as you zoom in.</li>
+        </ul>
+        <button id="closeHelpBtn">Got it</button>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("glcanvas");
+      const stage = document.getElementById("stage");
+      const hint = document.getElementById("hint");
+      const zoomInfo = document.getElementById("zoomInfo");
+      const iterInfo = document.getElementById("iterInfo");
+      const fractalTypeSel = document.getElementById("fractalType");
+      const paletteSelect = document.getElementById("paletteSelect");
+      const colorPanel = document.getElementById("colorPanel");
+      const customPanel = document.getElementById("customPanel");
+      const helpOverlay = document.getElementById("helpOverlay");
+
+      const gl = canvas.getContext("webgl", {
+        antialias: false,
+        preserveDrawingBuffer: false,
+      });
+      if (!gl) {
+        document.body.innerHTML =
+          '<div style="padding:40px;font-family:sans-serif;color:#fff;">Your browser/device does not support WebGL, which this fractal renderer needs.</div>';
+        throw new Error("no webgl");
+      }
+
+      let W, H, DPR;
+      function resize() {
+        DPR = Math.min(window.devicePixelRatio || 1, 2);
+        W = Math.floor(stage.clientWidth * DPR);
+        H = Math.floor(stage.clientHeight * DPR);
+        canvas.width = W;
+        canvas.height = H;
+        canvas.style.width = stage.clientWidth + "px";
+        canvas.style.height = stage.clientHeight + "px";
+        gl.viewport(0, 0, W, H);
+      }
+
+      // Keeping the shader source nearby makes renderer changes easier to review.
+      const vertSrc = `
+    attribute vec2 aPos;
+    void main() {
+    gl_Position = vec4(aPos, 0.0, 1.0);
+    }`;
+
+      const fragSrc = `
+        precision highp float;
+        uniform vec2 uResolution;
+        uniform float uCenterX;
+        uniform float uCenterY;
+        uniform float uScale;
+        uniform int uMaxIter;
+        uniform int uPower;
+        uniform int uMode;
+        uniform int uConjugate;
+        uniform int uAbsReal;
+        uniform int uAbsImag;
+        uniform int uPhoenix;
+        uniform float uPhoenixP;
+        uniform int uFlipY;
+        uniform vec2 uJuliaC;
+        uniform vec3 uPalette[6];
+        uniform float uCycles;
+
+        vec3 paletteColor(float t) {
+        if (t >= 0.9999) return uPalette[0];
+        float scaled = clamp(t * uCycles, 0.0, 0.9999) * 5.0;
+        int idx = int(floor(scaled));
+        float frac = scaled - float(idx);
+        vec3 a, b;
+        if (idx == 0) { a = uPalette[1]; b = uPalette[2]; }
+        else if (idx == 1) { a = uPalette[2]; b = uPalette[3]; }
+        else if (idx == 2) { a = uPalette[3]; b = uPalette[4]; }
+        else if (idx == 3) { a = uPalette[4]; b = uPalette[5]; }
+        else { a = uPalette[5]; b = uPalette[1]; }
+        return mix(a, b, smoothstep(0.0, 1.0, frac));
+        }
+
+        void main() {
+        vec2 uv = (gl_FragCoord.xy / uResolution.xy) - 0.5;
+        float aspect = uResolution.x / uResolution.y;
+
+        float c0r = uCenterX + uv.x * aspect * uScale;
+        float c0i = uCenterY + uv.y * uScale;
+        if (uFlipY == 1) { c0i = -c0i; }
+
+        float zr, zi, cr, ci;
+        if (uMode == 0) {
+            zr = 0.0; zi = 0.0;
+            cr = c0r; ci = c0i;
+        } else {
+            zr = c0r; zi = c0i;
+            cr = uJuliaC.x; ci = uJuliaC.y;
+        }
+
+        float zPrevR = 0.0;
+        float zPrevI = 0.0;
+        float iter = 0.0;
+        float mag2 = 0.0;
+
+        for (int i = 0; i < 3000; i++) {
+            if (i >= uMaxIter) break;
+            mag2 = zr * zr + zi * zi;
+            if (mag2 > 4.0) break;
+
+            float baseR = zr;
+            float baseI = (uConjugate == 1) ? -zi : zi;
+
+            float wr = baseR;
+            float wi = baseI;
+            for (int p = 1; p < 6; p++) {
+            if (p >= uPower) break;
+            float nextR = wr * baseR - wi * baseI;
+            float nextI = wr * baseI + wi * baseR;
+            wr = nextR; wi = nextI;
+            }
+
+            wr += cr;
+            wi += ci;
+
+            if (uPhoenix == 1) {
+            wr += uPhoenixP * zPrevR;
+            wi += uPhoenixP * zPrevI;
+            }
+            if (uAbsReal == 1 && wr < 0.0) { wr = -wr; }
+            if (uAbsImag == 1 && wi < 0.0) { wi = -wi; }
+
+            zPrevR = zr; zPrevI = zi;
+            zr = wr; zi = wi;
+            iter += 1.0;
+        }
+
+        if (iter >= float(uMaxIter) - 0.5) {
+            gl_FragColor = vec4(uPalette[0], 1.0);
+            return;
+        }
+
+        float logZn = log(mag2) / 2.0;
+        float nu = log(logZn / log(2.0)) / log(2.0);
+        float smoothIter = iter + 1.0 - nu;
+        float t = smoothIter / float(uMaxIter);
+        t = pow(clamp(t, 0.0, 1.0), 0.42);
+
+        gl_FragColor = vec4(paletteColor(t), 1.0);
+    }`;
+
+      // Shader errors are logged so the page remains usable while debugging.
+      function compileShader(src, type) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+          console.error(gl.getShaderInfoLog(s));
+        }
+        return s;
+      }
+      const prog = gl.createProgram();
+      gl.attachShader(prog, compileShader(vertSrc, gl.VERTEX_SHADER));
+      gl.attachShader(prog, compileShader(fragSrc, gl.FRAGMENT_SHADER));
+      gl.linkProgram(prog);
+      gl.useProgram(prog);
+
+      const quad = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+      const aPos = gl.getAttribLocation(prog, "aPos");
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+      const uResolution = gl.getUniformLocation(prog, "uResolution");
+      const uCenterX = gl.getUniformLocation(prog, "uCenterX");
+      const uCenterY = gl.getUniformLocation(prog, "uCenterY");
+      const uScale = gl.getUniformLocation(prog, "uScale");
+      const uMaxIter = gl.getUniformLocation(prog, "uMaxIter");
+      const uPower = gl.getUniformLocation(prog, "uPower");
+      const uModeLoc = gl.getUniformLocation(prog, "uMode");
+      const uConjugate = gl.getUniformLocation(prog, "uConjugate");
+      const uAbsReal = gl.getUniformLocation(prog, "uAbsReal");
+      const uAbsImag = gl.getUniformLocation(prog, "uAbsImag");
+      const uPhoenixLoc = gl.getUniformLocation(prog, "uPhoenix");
+      const uPhoenixPLoc = gl.getUniformLocation(prog, "uPhoenixP");
+      const uFlipY = gl.getUniformLocation(prog, "uFlipY");
+      const uJuliaC = gl.getUniformLocation(prog, "uJuliaC");
+      const uPalette = gl.getUniformLocation(prog, "uPalette[0]");
+      const uCycles = gl.getUniformLocation(prog, "uCycles");
+
+      // View state
+      let centerX = -0.5,
+        centerY = 0,
+        scale = 3,
+        baseScale = 3;
+      let fractalType = "mandelbrot";
+      let power = 2,
+        renderMode = 0,
+        conj = 0,
+        absR = 0,
+        absI = 0,
+        flipY = 0;
+      let phoenix = 0,
+        phoenixP = -0.5;
+      let juliaC = [-0.4, 0.6];
+
+      const presets = {
+        mandelbrot: {
+          power: 2,
+          mode: 0,
+          conj: 0,
+          absR: 0,
+          absI: 0,
+          flipY: 0,
+          phoenix: 0,
+          phoenixP: 0,
+          juliaC: [0, 0],
+          view: [-0.5, 0, 3],
+        },
+        julia1: {
+          power: 2,
+          mode: 1,
+          conj: 0,
+          absR: 0,
+          absI: 0,
+          flipY: 0,
+          phoenix: 0,
+          phoenixP: 0,
+          juliaC: [-0.4, 0.6],
+          view: [0, 0, 3.2],
+        },
+        julia2: {
+          power: 2,
+          mode: 1,
+          conj: 0,
+          absR: 0,
+          absI: 0,
+          flipY: 0,
+          phoenix: 0,
+          phoenixP: 0,
+          juliaC: [0.285, 0.01],
+          view: [0, 0, 3.2],
+        },
+        julia3: {
+          power: 2,
+          mode: 1,
+          conj: 0,
+          absR: 0,
+          absI: 0,
+          flipY: 0,
+          phoenix: 0,
+          phoenixP: 0,
+          juliaC: [-0.835, -0.2321],
+          view: [0, 0, 3.2],
+        },
+        burningship: {
+          power: 2,
+          mode: 0,
+          conj: 0,
+          absR: 1,
+          absI: 1,
+          flipY: 1,
+          phoenix: 0,
+          phoenixP: 0,
+          juliaC: [0, 0],
+          view: [-0.4, -0.6, 3.2],
+        },
+        tricorn: {
+          power: 2,
+          mode: 0,
+          conj: 1,
+          absR: 0,
+          absI: 0,
+          flipY: 0,
+          phoenix: 0,
+          phoenixP: 0,
+          juliaC: [0, 0],
+          view: [-0.5, 0, 3.2],
+        },
+        multibrot3: {
+          power: 3,
+          mode: 0,
+          conj: 0,
+          absR: 0,
+          absI: 0,
+          flipY: 0,
+          phoenix: 0,
+          phoenixP: 0,
+          juliaC: [0, 0],
+          view: [0, 0, 3.4],
+        },
+        celtic: {
+          power: 2,
+          mode: 0,
+          conj: 0,
+          absR: 1,
+          absI: 0,
+          flipY: 0,
+          phoenix: 0,
+          phoenixP: 0,
+          juliaC: [0, 0],
+          view: [-0.7, 0, 3.2],
+        },
+        phoenix: {
+          power: 2,
+          mode: 0,
+          conj: 0,
+          absR: 0,
+          absI: 0,
+          flipY: 0,
+          phoenix: 1,
+          phoenixP: -0.5,
+          juliaC: [0, 0],
+          view: [0, 0, 3.4],
+        },
+      };
+
+      function applyPreset(name) {
+        const p = presets[name];
+        power = p.power;
+        renderMode = p.mode;
+        conj = p.conj;
+        absR = p.absR;
+        absI = p.absI;
+        flipY = p.flipY;
+        phoenix = p.phoenix;
+        phoenixP = p.phoenixP;
+        juliaC = p.juliaC.slice();
+      }
+
+      function defaultCustomView() {
+        return renderMode === 1 ? [0, 0, 3.2] : [-0.5, 0, 3];
+      }
+
+      function resetView() {
+        const v =
+          fractalType === "custom"
+            ? defaultCustomView()
+            : presets[fractalType].view;
+        centerX = v[0];
+        centerY = v[1];
+        scale = v[2];
+        baseScale = v[2];
+      }
+
+      function hexToRgb(hex) {
+        const n = parseInt(hex.slice(1), 16);
+        return [
+          ((n >> 16) & 255) / 255,
+          ((n >> 8) & 255) / 255,
+          (n & 255) / 255,
+        ];
+      }
+
+      const palettePresets = {
+        fire: [
+          "#050302",
+          "#1a0800",
+          "#7a1f00",
+          "#e85d04",
+          "#ffb703",
+          "#fff3b0",
+        ],
+        ocean: [
+          "#000814",
+          "#001d3d",
+          "#003566",
+          "#0077b6",
+          "#48cae4",
+          "#e0fbfc",
+        ],
+        psychedelic: [
+          "#0a0014",
+          "#7209b7",
+          "#f72585",
+          "#4cc9f0",
+          "#ffd60a",
+          "#ffffff",
+        ],
+        mono: [
+          "#050505",
+          "#2b2b2b",
+          "#555555",
+          "#888888",
+          "#bbbbbb",
+          "#f5f5f5",
+        ],
+        forest: [
+          "#040c02",
+          "#0b3d02",
+          "#2d6a4f",
+          "#74c69d",
+          "#d8f3dc",
+          "#ffffff",
+        ],
+        grape: [
+          "#0d0221",
+          "#3d0e5f",
+          "#8338ec",
+          "#c77dff",
+          "#ff8fe3",
+          "#ffe8f7",
+        ],
+      };
+      const customColors = [
+        "#000814",
+        "#001d3d",
+        "#003566",
+        "#ffc300",
+        "#ffffff",
+      ];
+      let paletteName = "ocean";
+      let cycles = 1;
+
+      function paletteRgb() {
+        const colors =
+          paletteName === "custom"
+            ? [...customColors, customColors[customColors.length - 1]]
+            : palettePresets[paletteName];
+        return new Float32Array(colors.flatMap(hexToRgb));
+      }
+
+      let baseIter = 300;
+      function currentIterations() {
+        const zoomFactor = Math.max(1, baseScale / scale);
+        return Math.min(
+          3000,
+          Math.round(baseIter + Math.log2(zoomFactor) * 90),
+        );
+      }
+
+      function formatZoom(z) {
+        if (z < 1000) return z.toFixed(1) + "x";
+        if (z < 1e6) return (z / 1e3).toFixed(1) + "K x";
+        if (z < 1e9) return (z / 1e6).toFixed(1) + "M x";
+        if (z < 1e12) return (z / 1e9).toFixed(1) + "B x";
+        return z.toExponential(2) + "x";
+      }
+
+      var rafPending = false;
+      function render() {
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => {
+          rafPending = false;
+          const iterations = currentIterations();
+          iterInfo.textContent = "iterations: " + iterations;
+          zoomInfo.textContent = "zoom: " + formatZoom(baseScale / scale);
+
+          gl.uniform2f(uResolution, W, H);
+          gl.uniform1f(uCenterX, centerX);
+          gl.uniform1f(uCenterY, centerY);
+          gl.uniform1f(uScale, scale);
+          gl.uniform1i(uMaxIter, iterations);
+          gl.uniform1i(uPower, power);
+          gl.uniform1i(uModeLoc, renderMode);
+          gl.uniform1i(uConjugate, conj);
+          gl.uniform1i(uAbsReal, absR);
+          gl.uniform1i(uAbsImag, absI);
+          gl.uniform1i(uPhoenixLoc, phoenix);
+          gl.uniform1f(uPhoenixPLoc, phoenixP);
+          gl.uniform1i(uFlipY, flipY);
+          gl.uniform2f(uJuliaC, juliaC[0], juliaC[1]);
+          gl.uniform3fv(uPalette, paletteRgb());
+          gl.uniform1f(uCycles, cycles);
+
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        });
+      }
+
+      window.addEventListener("resize", () => {
+        resize();
+        render();
+      });
+      resize();
+
+      // Pointer interaction
+      let isDragging = false;
+      let dragButton = 0;
+      let dragStartX, dragStartY, dragCenterX, dragCenterY;
+      let mouseDownPos = null;
+
+      stage.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      function isInsideOverlayPanel(target) {
+        return !!(
+          target.closest && target.closest("#colorPanel, #customPanel")
+        );
+      }
+
+      stage.addEventListener("mousedown", (e) => {
+        if (isInsideOverlayPanel(e.target)) return;
+        isDragging = true;
+        dragButton = e.button;
+        stage.classList.add("dragging");
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        dragCenterX = centerX;
+        dragCenterY = centerY;
+        mouseDownPos = [e.clientX, e.clientY];
+        hint.style.opacity = "0";
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
+        const cw = stage.clientWidth,
+          ch = stage.clientHeight;
+        const viewW = scale;
+        const viewH = scale / (cw / ch);
+        centerX = dragCenterX - (dx / cw) * viewW;
+
+        centerY = dragCenterY + (dy / ch) * viewH;
+        render();
+      });
+      window.addEventListener("mouseup", (e) => {
+        if (isDragging) {
+          isDragging = false;
+          stage.classList.remove("dragging");
+        }
+        if (mouseDownPos) {
+          const dist = Math.hypot(
+            e.clientX - mouseDownPos[0],
+            e.clientY - mouseDownPos[1],
+          );
+          if (dist < 4) {
+            const rect = stage.getBoundingClientRect();
+            const factor = dragButton === 2 ? 1 / 0.42 : 0.42;
+            zoomAt(e.clientX - rect.left, e.clientY - rect.top, factor);
+          }
+          mouseDownPos = null;
+        }
+      });
+
+      function zoomAt(px, py, factor) {
+        const cw = stage.clientWidth,
+          ch = stage.clientHeight;
+        const viewW = scale;
+        const viewH = scale / (cw / ch);
+        const xMin = centerX - viewW / 2;
+
+        const yMax = centerY + viewH / 2;
+        const clickX = xMin + (px / cw) * viewW;
+        const clickY = yMax - (py / ch) * viewH;
+        centerX = clickX + (centerX - clickX) * factor;
+        centerY = clickY + (centerY - clickY) * factor;
+        scale *= factor;
+        render();
+      }
+
+      // p. 4 fix //
+
+      stage.addEventListener(
+        "wheel",
+        (e) => {
+          if (isInsideOverlayPanel(e.target)) return;
+          e.preventDefault();
+          hint.style.opacity = "0";
+          const rect = stage.getBoundingClientRect();
+
+          const px = e.deltaMode === 1 ? e.deltaY * 18 : e.deltaY;
+          const factor = Math.pow(1.0016, px);
+          zoomAt(e.clientX - rect.left, e.clientY - rect.top, factor);
+        },
+        { passive: false },
+      );
+
+      // Touch interaction
+      let lastTouchDist = null;
+      stage.addEventListener(
+        "touchstart",
+        (e) => {
+          if (isInsideOverlayPanel(e.target)) return;
+          hint.style.opacity = "0";
+          if (e.touches.length === 1) {
+            isDragging = true;
+            dragStartX = e.touches[0].clientX;
+            dragStartY = e.touches[0].clientY;
+            dragCenterX = centerX;
+            dragCenterY = centerY;
+          } else if (e.touches.length === 2) {
+            isDragging = false;
+            const [t1, t2] = e.touches;
+            lastTouchDist = Math.hypot(
+              t2.clientX - t1.clientX,
+              t2.clientY - t1.clientY,
+            );
+          }
+        },
+        { passive: true },
+      );
+      stage.addEventListener(
+        "touchmove",
+        (e) => {
+          if (e.touches.length === 1 && isDragging) {
+            const cw = stage.clientWidth,
+              ch = stage.clientHeight;
+            const dx = e.touches[0].clientX - dragStartX;
+            const dy = e.touches[0].clientY - dragStartY;
+            const viewW = scale;
+            const viewH = scale / (cw / ch);
+            centerX = dragCenterX - (dx / cw) * viewW;
+            centerY = dragCenterY + (dy / ch) * viewH;
+            render();
+          } else if (e.touches.length === 2) {
+            const [t1, t2] = e.touches;
+            const dist = Math.hypot(
+              t2.clientX - t1.clientX,
+              t2.clientY - t1.clientY,
+            );
+            const mid = [
+              (t1.clientX + t2.clientX) / 2,
+              (t1.clientY + t2.clientY) / 2,
+            ];
+            if (lastTouchDist) {
+              const rect = stage.getBoundingClientRect();
+              zoomAt(
+                mid[0] - rect.left,
+                mid[1] - rect.top,
+                lastTouchDist / dist,
+              );
+            }
+            lastTouchDist = dist;
+          }
+        },
+        { passive: true },
+      );
+      stage.addEventListener("touchend", () => {
+        isDragging = false;
+        lastTouchDist = null;
+      });
+
+      window.addEventListener("keydown", (e) => {
+        const tag = (e.target.tagName || "").toLowerCase();
+        if (tag === "input" || tag === "select" || tag === "textarea") return;
+        const cw = stage.clientWidth,
+          ch = stage.clientHeight;
+        if (e.key === "+" || e.key === "=") {
+          zoomAt(cw / 2, ch / 2, 0.7);
+        } else if (e.key === "-" || e.key === "_") {
+          zoomAt(cw / 2, ch / 2, 1 / 0.7);
+        } else if (e.key === "0") {
+          resetBtn.click();
+        }
+      });
+
+      // Controls
+      const resetBtn = document.getElementById("resetBtn");
+      resetBtn.addEventListener("click", () => {
+        resetView();
+        render();
+      });
+
+      fractalTypeSel.addEventListener("change", (e) => {
+        fractalType = e.target.value;
+        if (fractalType === "custom") {
+          customPanel.classList.add("show");
+          applyCustomFromPanel(false);
+        } else {
+          customPanel.classList.remove("show");
+          applyPreset(fractalType);
+        }
+        resetView();
+        render();
+      });
+
+      paletteSelect.addEventListener("change", (e) => {
+        paletteName = e.target.value;
+        colorPanel.classList.toggle("show", paletteName === "custom");
+        render();
+      });
+      ["c0", "c1", "c2", "c3", "c4"].forEach((id, i) => {
+        const input = document.getElementById(id);
+        const updateColor = (e) => {
+          customColors[i] = e.target.value;
+          paletteName = "custom";
+          paletteSelect.value = "custom";
+          render();
+        };
+        input.addEventListener("input", updateColor);
+        input.addEventListener("change", updateColor);
+      });
+      const cycleSlider = document.getElementById("cycleCount");
+      const cycleVal = document.getElementById("cycleVal");
+      cycleSlider.addEventListener("input", (e) => {
+        cycles = parseFloat(e.target.value);
+        cycleVal.textContent = e.target.value;
+        render();
+      });
+
+      // Custom fractal controls
+      const customModeSel = document.getElementById("customMode");
+      const customPowerSlider = document.getElementById("customPower");
+      const powerVal = document.getElementById("powerVal");
+      const customConjChk = document.getElementById("customConj");
+      const customAbsRChk = document.getElementById("customAbsR");
+      const customAbsIChk = document.getElementById("customAbsI");
+      const customFlipChk = document.getElementById("customFlip");
+      const customPhoenixChk = document.getElementById("customPhoenix");
+      const phoenixPField = document.getElementById("phoenixPField");
+      const phoenixPSlider = document.getElementById("phoenixP");
+      const phoenixPVal = document.getElementById("phoenixPVal");
+      const juliaCField = document.getElementById("juliaCField");
+      const juliaCReInput = document.getElementById("juliaCRe");
+      const juliaCImInput = document.getElementById("juliaCIm");
+
+      function applyCustomFromPanel(doRender) {
+        const prevMode = renderMode;
+        renderMode = parseInt(customModeSel.value, 10);
+        power = parseInt(customPowerSlider.value, 10);
+        powerVal.textContent = power;
+        conj = customConjChk.checked ? 1 : 0;
+        absR = customAbsRChk.checked ? 1 : 0;
+        absI = customAbsIChk.checked ? 1 : 0;
+        flipY = customFlipChk.checked ? 1 : 0;
+        phoenix = customPhoenixChk.checked ? 1 : 0;
+        phoenixP = parseFloat(phoenixPSlider.value) || 0;
+        phoenixPVal.textContent = phoenixP.toFixed(2);
+        juliaC = [
+          parseFloat(juliaCReInput.value) || 0,
+          parseFloat(juliaCImInput.value) || 0,
+        ];
+        juliaCField.style.display = renderMode === 1 ? "block" : "none";
+        phoenixPField.style.display = phoenix ? "block" : "none";
+
+        if (doRender !== false && renderMode !== prevMode) resetView();
+        if (doRender !== false) render();
+      }
+      [
+        customPowerSlider,
+        customConjChk,
+        customAbsRChk,
+        customAbsIChk,
+        customFlipChk,
+        customPhoenixChk,
+        phoenixPSlider,
+        juliaCReInput,
+        juliaCImInput,
+      ].forEach((el) =>
+        el.addEventListener("input", () => applyCustomFromPanel(true)),
+      );
+      customModeSel.addEventListener("change", () =>
+        applyCustomFromPanel(true),
+      );
+
+      document
+        .getElementById("randomFractalBtn")
+        .addEventListener("click", () => {
+          customModeSel.value = Math.random() < 0.5 ? "0" : "1";
+          customPowerSlider.value = 2 + Math.floor(Math.random() * 5);
+          customConjChk.checked = Math.random() < 0.3;
+          customAbsRChk.checked = Math.random() < 0.4;
+          customAbsIChk.checked = Math.random() < 0.4;
+          customFlipChk.checked = Math.random() < 0.2;
+          customPhoenixChk.checked = Math.random() < 0.25;
+          phoenixPSlider.value = (Math.random() * 1.4 - 0.7).toFixed(2);
+          juliaCReInput.value = (Math.random() * 1.8 - 0.9).toFixed(3);
+          juliaCImInput.value = (Math.random() * 1.8 - 0.9).toFixed(3);
+          applyCustomFromPanel(false);
+          resetView();
+          render();
+        });
+      document
+        .getElementById("closeCustomBtn")
+        .addEventListener("click", () => {
+          customPanel.classList.remove("show");
+        });
+
+      const helpBtn = document.getElementById("helpBtn");
+      helpBtn.addEventListener("click", () =>
+        helpOverlay.classList.add("show"),
+      );
+      document
+        .getElementById("closeHelpBtn")
+        .addEventListener("click", () => helpOverlay.classList.remove("show"));
+      helpOverlay.addEventListener("click", (e) => {
+        if (e.target === helpOverlay) helpOverlay.classList.remove("show");
+      });
+
+      setTimeout(() => {
+        hint.style.opacity = "0";
+      }, 5000);
+
+      applyPreset(fractalType);
+      resetView();
+      render();
+    </script>
+  </body>
+</html>
